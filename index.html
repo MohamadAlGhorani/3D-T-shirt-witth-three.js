@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>threeJS</title>
+</head>
+<body>
+    <style>
+        button{
+            position:absolute;
+            top: 5em;
+            left: 1px;
+            right: 1px;
+            margin: 0 auto;
+            width: 10em;
+            padding: 1em;
+            border-radius: 5px;
+        }
+        li:first-of-type {
+            background-color: yellow;
+            padding: 1em;
+            width: 3em;
+            text-align: center;
+            border-radius: 5px;
+        }
+        li:nth-of-type(2) {
+            background-color: red;
+            padding: 1em;
+            width: 3em;
+            text-align: center;
+            border-radius: 5px;
+        }
+        li:nth-of-type(3) {
+            background-color: green;
+            padding: 1em;
+            width: 3em;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        ul {
+            display: flex;
+            justify-content: space-between;
+            width: 20em;
+            position: absolute;
+            bottom: 3em;
+            left: 1px;
+            right: 1px;
+            margin: 0 auto;
+            list-style: none;
+        }
+
+        form {
+            position: absolute;
+            top: 8em;
+            left: 1px;
+            right: 1px;
+            margin: 0 auto;
+            width: 12em;
+        }
+    </style>
+    <button>Change T-shirt</button>
+    <ul>
+        <li>Yellow</li>
+        <li>Red</li>
+        <li>Green</li>
+    </ul>
+    <form action="">
+            <input type="file" data-buttonText="Your label here.">
+    </form>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/102/three.js"></script>
+    <script src="js/three.js"></script>
+    <script src="js/TrackballControls.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/GLTFLoader.js"></script>
+    <script src="js/DecalGeometry.js" ></script>
+
+    <script>
+
+///////////////////////////////////////////////////----START-SCRIPT----//////////////////////////////////////////////////
+var button = document.querySelector('button');
+window.ImageBitmap = window.ImageBitmap || function () {
+    return null
+}
+var modelSrc = 'models/f500-man-tshirt';
+var situatie = 1;
+var geel = document.querySelector('body ul li:first-of-type');
+var rood = document.querySelector('body ul li:nth-of-type(2)');
+var groen = document.querySelector('body ul li:last-of-type');
+var input = document.querySelector('body form input');
+
+// een texture toevoegen door een input
+input.addEventListener('change', function(event){
+    const files = event.target.files;
+
+    if (files && files[0]) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            console.log('finished onload', e.target.result);
+            loadTexture(e.target.result);
+            tshirt.traverse((o) => {
+                if (o.isMesh) {
+                    // note: for a multi-material mesh, `o.material` may be an array,
+                    // in which case you'd need to set `.map` on each value.
+                    
+                    o.material.map = texture;
+                }
+            });
+        }
+        reader.readAsDataURL(files[0]);
+    }
+});
+
+
+//de model veravngen
+button.addEventListener('click', function changeSrc() {
+    if (modelSrc == 'models/f500-man-tshirt') {
+        scene.remove(tshirt);
+        modelSrc = modelSrc + '1';
+        loader.load(modelSrc + '.glb', handle_load);
+        situatie = 2;
+        return situatie;
+    } else {
+        scene.remove(tshirt);
+        modelSrc = 'models/f500-man-tshirt';
+        loader.load(modelSrc + '.glb', handle_load);
+        situatie = 2;
+        return situatie;
+    }
+});
+
+// scene en camera en renderer maken 
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 15;
+
+var renderer = new THREE.WebGLRenderer({
+    antialias: true
+});
+renderer.setClearColor('#e5e5e5');
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+document.body.appendChild(renderer.domElement);
+
+//responsief canvas maken
+window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+})
+
+//control opties  
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.campingFactore = 0.25;
+controls.enableZoom = false;
+
+// texture toevoegen 
+var texture;
+function loadTexture(string){
+    var textureLoader = new THREE.TextureLoader();
+    texture = textureLoader.load(string);
+    texture.flipY = false;
+    texture.offset.x = 0.1; // 0.0 - 1.0
+    texture.offset.y = 0.1; // 0.0 - 1.0
+    texture.repeat.set(0.7, 0.7);
+    // texture.image.height = '300';
+}
+loadTexture('models/me.jpg');
+
+//licht toevoegen
+var light = new THREE.PointLight(0xFFFFFF, 2, 1000);
+light.position.set(10, 0, 25);
+camera.add(light);
+scene.add(camera);
+
+// 3d model laten loaden  
+var loader = new THREE.GLTFLoader();
+var tshirt;
+// var tshirtClone;
+loader.load(modelSrc + '.glb', handle_load);
+
+function handle_load(gltf) {
+    tshirt = gltf.scene;
+    tshirt.traverse((o) => {
+        if (o.isMesh) {
+            // note: for a multi-material mesh, `o.material` may be an array,
+            // in which case you'd need to set `.map` on each value.
+            o.material.map = texture;
+        }
+    });
+    // tshirt.layers.set(0, color);
+    // tshirt.layers.set(1, texture);
+    // tshirtClone = tshirt.clone();
+    scene.add(tshirt);
+    // scene.add(tshirtClone);
+        if(situatie == 1) {
+            render();
+            console.log(tshirt);
+         }
+}
+
+// de model laten draaien
+var render = function () {
+    requestAnimationFrame(render);
+
+    tshirt.rotation.y += 0.01;
+    //tshirtClone.rotation.y += 0.01;
+
+    renderer.render(scene, camera);
+}
+
+//de kleur of iets anders veranderen als je op de object zelf iets doet bv mousemove click etc...
+// var raycaster = new THREE.Raycaster();
+// var mouse = new THREE.Vector2();
+
+// function omMouseDown(event) {
+//     event.preventDefault();
+//     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+//     raycaster.setFromCamera(mouse, camera);
+
+//     var intersects = raycaster.intersectObjects(scene.children, true);
+//     for (var i = 0; i < intersects.length; i++) {
+//         // intersects[i].object[0].material.color.set(0xffcc00);
+//         tshirt.children[0].children[0].material.color.set(0xff0000);
+//     }
+// }
+// window.addEventListener('click', omMouseDown);
+
+//kleur en material veranderen door een knop op de pagina
+function color() {
+    //---------tshirt code------//
+    tshirt.children[0].children[0].material.color.set(0xffcc00);
+    //--------- auto code-------//
+    // tshirt.children[1].children[22].material.color.set(0x00000);
+    // tshirt.children[1].children[8].material.color.set(0xffcc00);
+    // tshirt.children[1].children[8].material.skinning = true;
+    // var raam = tshirt.getObjectByName('Windows');
+    // raam.material = new THREE.MeshStandardMaterial({color: 0xffcc00, metalness: 1, roughness: 1, opacity: 0.2, transparent: true, premultipliedAlpha: true, name: 'clear' });
+}
+geel.addEventListener('click', color);
+
+function colorTwee() {
+    //---------tshirt code------//
+    tshirt.children[0].children[0].material.color.set(0xff0000);
+    // tshirt.children[0].children[2].material.color.set(0xff0000);
+    //-------- auto code---------//
+    // tshirt.children[1].children[8].material.color.set(0xff0000);
+}
+rood.addEventListener('click', colorTwee);
+
+function colorDree() {
+    //---------tshirt code------//
+    tshirt.children[0].children[0].material.color.set(0x21ce3f);
+    // tshirt.children[0].children[1].material.color.set(0x21ce3f);
+    //--------auto code----------//
+    // tshirt.children[1].children[8].material.color.set(0x21ce3f);
+}
+groen.addEventListener('click', colorDree);
+
+
+//DecalGeometry maken-------------------------------------------------------------------/////////////----------///////////---------------------
+// var geometry =  new THREE.DecalGeometry( mesh, THREE.Vector3, THREE.Euler, THREE.Vector3);
+// var material = new THREE.MeshBasicMaterial( { 
+//     map: THREE.ImageUtils.loadTexture( 'models/3.png' ),
+//     transparent: true, 
+// 	side: THREE.DoubleSide,
+// 	depthTest: true, 
+// 	depthWrite: true, 
+// 	polygonOffset: true,
+// 	polygonOffsetFactor: -4 } );
+// var mesh = new THREE.Mesh( geometry, material );
+// scene.add( mesh );
+
+
+    </script>
+</body>
+</html>
